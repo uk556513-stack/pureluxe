@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
-
+import Lenis from "lenis";
 import {
   FaBars,
   FaTimes,
@@ -63,18 +63,43 @@ function App() {
   const [email, setEmail] = useState("");
   const [newsletterMessage, setNewsletterMessage] = useState("");
   const [contactMessage, setContactMessage] = useState("");
+useEffect(() => {
+  AOS.init({
+    duration: 550,
+    once: true,
+    offset: 50,
+    easing: "ease-out",
+    mirror: false,
+    disableMutationObserver: false,
+  });
 
-  useEffect(() => {
-    AOS.init({
-      duration: 1000,
-      once: true,
-      offset: 80,
-      easing: "ease-in-out",
-    });
+  return () => {
+    AOS.refreshHard();
+  };
+}, []);
+useEffect(() => {
+  const lenis = new Lenis({
+    duration: 1.1,
+    smoothWheel: true,
+    wheelMultiplier: 0.85,
+    touchMultiplier: 1.2,
+    lerp: 0.1,
+  });
 
-    AOS.refresh();
-  }, []);
+  let rafId;
 
+  function raf(time) {
+    lenis.raf(time);
+    rafId = requestAnimationFrame(raf);
+  }
+
+  rafId = requestAnimationFrame(raf);
+
+  return () => {
+    cancelAnimationFrame(rafId);
+    lenis.destroy();
+  };
+}, []);
   const categories = [
     {
       name: "Cleansers",
@@ -412,6 +437,43 @@ const faqs = [
           </div>
         </div>
       )}
+      <div className="animated-universe">
+  <div className="liquid-blob blob-one"></div>
+  <div className="liquid-blob blob-two"></div>
+  <div className="liquid-blob blob-three"></div>
+
+  <div className="aurora-wave wave-one"></div>
+  <div className="aurora-wave wave-two"></div>
+
+  <div className="floating-ring ring-one"></div>
+  <div className="floating-ring ring-two"></div>
+  <div className="floating-ring ring-three"></div>
+
+  <div className="floating-orb orb-one"></div>
+  <div className="floating-orb orb-two"></div>
+  <div className="floating-orb orb-three"></div>
+  <div className="floating-orb orb-four"></div>
+  <div className="floating-orb orb-five"></div>
+</div>
+<div className="light-beam beam-one"></div>
+<div className="light-beam beam-two"></div>
+<div className="light-beam beam-three"></div>
+
+<div className="energy-circle energy-one"></div>
+<div className="energy-circle energy-two"></div>
+<div className="particle-field">
+  {Array.from({ length: 8 }, (_, index) => (
+    <span
+      key={index}
+      className={`particle particle-${index}`}
+      style={{
+        left: `${(index * 37) % 100}%`,
+        top: `${(index * 53) % 100}%`,
+        animationDelay: `${index * -1.5}s`,
+      }}
+    />
+  ))}
+</div>
       {/* HERO SECTION */}
 <section className="hero-section" id="home">
 

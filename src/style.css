@@ -10156,3 +10156,39 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+/* NAVBAR */
+
+.custom-navbar {
+  width: 100%;
+  padding: 15px 0;
+  position: relative;
+}
+
+.custom-navbar .container {
+  max-width: 100%;
+  width: 100%;
+  padding-left: 25px;
+  padding-right: 25px;
+  margin: 0;
+}
+
+.brand-logo {
+  margin-left: 0 !important;
+  margin-right: auto;
+  padding-left: 0 !important;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #526b4d !important;
+  text-decoration: none;
+}
+@media (max-width: 768px) {
+  .custom-navbar .container {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .brand-logo {
+    font-size: 23px;
+  }
+}

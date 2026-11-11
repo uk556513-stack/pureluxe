@@ -777,10 +777,12 @@ const faqs = [
               <FaCheckCircle />
               <span>Beauty, comfort and confidence</span>
             </div>
+            <div>
+              <FaCheckCircle />
+              <span>Carefully selected skincare essentials</span>
+            </div>
 
           </div>
-
-          
 
         </div>
       </div>

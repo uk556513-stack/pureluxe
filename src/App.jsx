@@ -1,8 +1,8 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import Lenis from "lenis";
+
 import {
   FaBars,
   FaTimes,
@@ -26,7 +26,6 @@ import {
   FaPinterestP,
   FaRegSmile,
   FaSun,
-  FaMoon,
   FaTint,
 } from "react-icons/fa";
 
@@ -46,16 +45,17 @@ import product3 from "./assets/product3.png";
 import product4 from "./assets/product4.png";
 import product5 from "./assets/product5.png";
 import product6 from "./assets/product6.png";
+import product7 from "./assets/product7.png";
 
-// OTHER SECTION IMAGES
+// OTHER IMAGES
 import collection from "./assets/collection.png";
 import about from "./assets/about.png";
 import highlight from "./assets/highlight.png";
 import offer from "./assets/offer.png";
 
 function App() {
+  // GENERAL STATES
   const [menuOpen, setMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
   const [wishlist, setWishlist] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,43 +63,60 @@ function App() {
   const [email, setEmail] = useState("");
   const [newsletterMessage, setNewsletterMessage] = useState("");
   const [contactMessage, setContactMessage] = useState("");
-useEffect(() => {
-  AOS.init({
-    duration: 550,
-    once: true,
-    offset: 50,
-    easing: "ease-out",
-    mirror: false,
-    disableMutationObserver: false,
+
+  // CART STATES
+  const [cartItems, setCartItems] = useState([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [orderId, setOrderId] = useState("");
+
+  const [customer, setCustomer] = useState({
+    name: "",
+    phone: "",
+    address: "",
   });
 
-  return () => {
-    AOS.refreshHard();
-  };
-}, []);
-useEffect(() => {
-  const lenis = new Lenis({
-    duration: 1.1,
-    smoothWheel: true,
-    wheelMultiplier: 0.85,
-    touchMultiplier: 1.2,
-    lerp: 0.1,
-  });
+  // AOS INITIALIZATION
+  useEffect(() => {
+    AOS.init({
+      duration: 550,
+      once: true,
+      offset: 50,
+      easing: "ease-out",
+    });
 
-  let rafId;
+    return () => {
+      AOS.refreshHard();
+    };
+  }, []);
 
-  function raf(time) {
-    lenis.raf(time);
+  // LENIS SMOOTH SCROLL
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.1,
+      smoothWheel: true,
+      wheelMultiplier: 0.85,
+      touchMultiplier: 1.2,
+      lerp: 0.1,
+    });
+
+    let rafId;
+
+    const raf = (time) => {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    };
+
     rafId = requestAnimationFrame(raf);
-  }
 
-  rafId = requestAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, []);
 
-  return () => {
-    cancelAnimationFrame(rafId);
-    lenis.destroy();
-  };
-}, []);
+  // CATEGORY DATA
   const categories = [
     {
       name: "Cleansers",
@@ -123,6 +140,7 @@ useEffect(() => {
     },
   ];
 
+  // PRODUCT DATA
   const products = [
     {
       id: 1,
@@ -186,15 +204,27 @@ useEffect(() => {
     },
     {
       id: 6,
-      name: "Silky Body Lotion",
-      category: "Moisturizer",
-      price: 449,
-      oldPrice: 549,
-      rating: 4.6,
-      reviews: 65,
+      name: "Vitamin C Glow Serum",
+      category: "Serum",
+      price: 799,
+      oldPrice: 999,
+      rating: 4.8,
+      reviews: 96,
       image: product6,
       tag: "EVERYDAY CARE",
-      description: "Daily body hydration with a smooth finish.",
+      description: "A brightening daily serum for radiant-looking skin.",
+    },
+    {
+      id: 7,
+      name: "Sun Guard SPF 50",
+      category: "Sunscreen",
+      price: 849,
+      oldPrice: 1049,
+      rating: 4.9,
+      reviews: 88,
+      image: product7,
+      tag: "SPECIAL OFFER",
+      description: "Daily broad-spectrum sun protection.",
     },
   ];
 
@@ -204,12 +234,86 @@ useEffect(() => {
     products[3],
   ];
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [searchTerm]);
+  // SEARCH FILTER
+  const filteredProducts = useMemo(
+    () =>
+      products.filter((product) =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [searchTerm]
+  );
 
+  // CART CALCULATIONS
+  const cartCount = cartItems.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+
+  const cartTotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  // ADD TO CART
+  const addToCart = (product) => {
+    setCartItems((previous) => {
+      const existing = previous.find(
+        (item) => item.id === product.id
+      );
+
+      if (existing) {
+        return previous.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+
+      return [
+        ...previous,
+        {
+          ...product,
+          quantity: 1,
+        },
+      ];
+    });
+
+    setCheckoutOpen(false);
+    setCartOpen(true);
+  };
+
+  // INCREASE QUANTITY
+  const increaseQuantity = (id) => {
+    setCartItems((previous) =>
+      previous.map((item) =>
+        item.id === id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    );
+  };
+
+  // DECREASE QUANTITY
+  const decreaseQuantity = (id) => {
+    setCartItems((previous) =>
+      previous
+        .map((item) =>
+          item.id === id
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
+  // REMOVE PRODUCT
+  const removeFromCart = (id) => {
+    setCartItems((previous) =>
+      previous.filter((item) => item.id !== id)
+    );
+  };
+
+  // WISHLIST
   const toggleWishlist = (id) => {
     setWishlist((previous) =>
       previous.includes(id)
@@ -218,60 +322,80 @@ useEffect(() => {
     );
   };
 
-  const addToCart = () => {
-    setCartCount((previous) => previous + 1);
-  };
-
+  // CLOSE MOBILE MENU
   const closeMenu = () => {
     setMenuOpen(false);
   };
-const faqs = [
-  {
-    question: "How do I choose the right skincare products?",
-    answer:
-      "Start by understanding your skin type and concerns. Choose products that suit your skin and introduce new products gradually."
-  },
-  {
-    question: "Can I use multiple skincare products together?",
-    answer:
-      "Yes, many skincare products can be used together. Follow a simple routine of cleansing, moisturizing and daytime sun protection. Check product instructions before combining active ingredients."
-  },
-  {
-    question: "How long does product delivery take?",
-    answer:
-      "Delivery times depend on your location and shipping method. You can check the estimated delivery details during checkout."
-  },
-  {
-    question: "Can I return or exchange a product?",
-    answer:
-      "Return and exchange eligibility depends on our store policy. Please contact our customer support team for assistance."
-  },
-  {
-    question: "How can I track my order?",
-    answer:
-      "Once your order is shipped, you can use the tracking details shared with your registered email or phone number to follow your delivery."
-  }
-];
+
+  // NEWSLETTER
   const handleNewsletter = (e) => {
     e.preventDefault();
 
-    if (!email.trim()) {
-      setNewsletterMessage("Please enter your email address.");
-      return;
-    }
+    setNewsletterMessage(
+      "Thank you for subscribing to PURELUXE!"
+    );
 
-    setNewsletterMessage("Thank you for subscribing to LUMORA!");
     setEmail("");
   };
 
+  // CONTACT FORM
   const handleContact = (e) => {
     e.preventDefault();
+
     setContactMessage(
-      "Thank you for contacting LUMORA. Your message has been submitted."
+      "Thank you for contacting PURELUXE. Your message has been submitted."
     );
+
     e.target.reset();
   };
 
+  // CONFIRM ORDER
+  const handlePlaceOrder = (e) => {
+    e.preventDefault();
+
+    if (cartItems.length === 0) return;
+
+    const generatedOrderId =
+      `PLX${Date.now().toString().slice(-8)}`;
+
+    setOrderId(generatedOrderId);
+    setOrderPlaced(true);
+
+    setCartItems([]);
+    setCheckoutOpen(false);
+    setCartOpen(false);
+  };
+
+  // FAQ DATA
+  const faqs = [
+    {
+      question: "How do I choose the right skincare products?",
+      answer:
+        "Start by understanding your skin type and concerns. Choose products that suit your skin and introduce new products gradually.",
+    },
+    {
+      question: "Can I use multiple skincare products together?",
+      answer:
+        "Yes, many skincare products can be used together. Follow a simple routine of cleansing, moisturizing and daytime sun protection. Check product instructions before combining active ingredients.",
+    },
+    {
+      question: "How long does product delivery take?",
+      answer:
+        "Delivery times depend on your location and shipping method. You can check the estimated delivery details during checkout.",
+    },
+    {
+      question: "Can I return or exchange a product?",
+      answer:
+        "Return and exchange eligibility depends on our store policy. Please contact our customer support team for assistance.",
+    },
+    {
+      question: "How can I track my order?",
+      answer:
+        "Once your order is shipped, you can use the tracking details shared with your registered email or phone number to follow your delivery.",
+    },
+  ];
+
+  // PRODUCT CARD
   const ProductCard = ({ product }) => (
     <div className="product-card" data-aos="fade-up">
       <div className="product-image">
@@ -293,7 +417,7 @@ const faqs = [
 
         <button
           className="quick-add-btn"
-          onClick={addToCart}
+          onClick={() => addToCart(product)}
         >
           <FaShoppingBag /> Add to Bag
         </button>
@@ -302,12 +426,16 @@ const faqs = [
       <div className="product-info">
         <p className="product-category">{product.category}</p>
         <h3>{product.name}</h3>
-        <p className="product-description">{product.description}</p>
+        <p className="product-description">
+          {product.description}
+        </p>
 
         <div className="product-rating">
           <FaStar />
           <span>{product.rating}</span>
-          <span className="review-count">({product.reviews} reviews)</span>
+          <span className="review-count">
+            ({product.reviews} reviews)
+          </span>
         </div>
 
         <div className="product-price">
@@ -317,16 +445,19 @@ const faqs = [
       </div>
     </div>
   );
-
-  return (
+    return (
     <div className="lumora-website">
 
       {/* NAVBAR */}
       <nav className="navbar navbar-expand-lg custom-navbar">
         <div className="container">
-          <a href="#home" className="navbar-brand brand-logo" onClick={closeMenu}>
+
+          <a
+            href="#home"
+            className="navbar-brand brand-logo"
+            onClick={closeMenu}
+          >
             PURELUXE
-            
           </a>
 
           <div className="nav-actions mobile-actions">
@@ -338,7 +469,11 @@ const faqs = [
               <FaSearch />
             </button>
 
-            <button className="nav-icon-btn cart-icon" aria-label="Shopping bag">
+            <button
+              className="nav-icon-btn cart-icon"
+              onClick={() => setCartOpen(true)}
+              aria-label="Shopping bag"
+            >
               <FaShoppingBag />
               <span>{cartCount}</span>
             </button>
@@ -357,24 +492,30 @@ const faqs = [
               <li className="nav-item">
                 <a href="#home" className="nav-link" onClick={closeMenu}>Home</a>
               </li>
+
               <li className="nav-item">
                 <a href="#categories" className="nav-link" onClick={closeMenu}>Categories</a>
               </li>
+
               <li className="nav-item">
                 <a href="#products" className="nav-link" onClick={closeMenu}>Shop</a>
               </li>
+
               <li className="nav-item">
                 <a href="#about" className="nav-link" onClick={closeMenu}>Our Story</a>
               </li>
+
               <li className="nav-item">
                 <a href="#reviews" className="nav-link" onClick={closeMenu}>Reviews</a>
               </li>
+
               <li className="nav-item">
                 <a href="#contact" className="nav-link" onClick={closeMenu}>Contact</a>
               </li>
             </ul>
 
             <div className="nav-actions desktop-actions">
+
               <button
                 className="nav-icon-btn"
                 onClick={() => setSearchOpen(!searchOpen)}
@@ -383,15 +524,23 @@ const faqs = [
                 <FaSearch />
               </button>
 
-              <button className="nav-icon-btn wishlist-nav" aria-label="Wishlist">
+              <button
+                className="nav-icon-btn wishlist-nav"
+                aria-label="Wishlist"
+              >
                 <FaHeart />
                 <span>{wishlist.length}</span>
               </button>
 
-              <button className="nav-icon-btn cart-icon" aria-label="Shopping bag">
+              <button
+                className="nav-icon-btn cart-icon"
+                onClick={() => setCartOpen(true)}
+                aria-label="Shopping bag"
+              >
                 <FaShoppingBag />
                 <span>{cartCount}</span>
               </button>
+
             </div>
           </div>
         </div>
@@ -401,24 +550,30 @@ const faqs = [
       {searchOpen && (
         <div className="search-panel">
           <div className="container">
+
             <div className="search-box">
               <FaSearch />
+
               <input
                 type="text"
                 placeholder="Search skincare products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <button onClick={() => {
-                setSearchOpen(false);
-                setSearchTerm("");
-              }}>
+
+              <button
+                onClick={() => {
+                  setSearchOpen(false);
+                  setSearchTerm("");
+                }}
+              >
                 <FaTimes />
               </button>
             </div>
 
             {searchTerm && (
               <div className="search-results">
+
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
                     <a
@@ -432,932 +587,1321 @@ const faqs = [
                 ) : (
                   <p>No matching products found.</p>
                 )}
+
               </div>
             )}
+
           </div>
         </div>
       )}
+
+      {/* ANIMATED BACKGROUND */}
       <div className="animated-universe">
-  <div className="liquid-blob blob-one"></div>
-  <div className="liquid-blob blob-two"></div>
-  <div className="liquid-blob blob-three"></div>
+        <div className="liquid-blob blob-one"></div>
+        <div className="liquid-blob blob-two"></div>
+        <div className="liquid-blob blob-three"></div>
 
-  <div className="aurora-wave wave-one"></div>
-  <div className="aurora-wave wave-two"></div>
+        <div className="aurora-wave wave-one"></div>
+        <div className="aurora-wave wave-two"></div>
 
-  <div className="floating-ring ring-one"></div>
-  <div className="floating-ring ring-two"></div>
-  <div className="floating-ring ring-three"></div>
+        <div className="floating-ring ring-one"></div>
+        <div className="floating-ring ring-two"></div>
+        <div className="floating-ring ring-three"></div>
 
-  <div className="floating-orb orb-one"></div>
-  <div className="floating-orb orb-two"></div>
-  <div className="floating-orb orb-three"></div>
-  <div className="floating-orb orb-four"></div>
-  <div className="floating-orb orb-five"></div>
-</div>
-<div className="light-beam beam-one"></div>
-<div className="light-beam beam-two"></div>
-<div className="light-beam beam-three"></div>
-
-<div className="energy-circle energy-one"></div>
-<div className="energy-circle energy-two"></div>
-<div className="particle-field">
-  {Array.from({ length: 8 }, (_, index) => (
-    <span
-      key={index}
-      className={`particle particle-${index}`}
-      style={{
-        left: `${(index * 37) % 100}%`,
-        top: `${(index * 53) % 100}%`,
-        animationDelay: `${index * -1.5}s`,
-      }}
-    />
-  ))}
-</div>
-      {/* HERO SECTION */}
-<section className="hero-section" id="home">
-
-  <img
-    src={hero}
-    alt="PURELUXE Premium Skincare"
-    className="hero-bg-image"
-  />
-
-  <div className="container">
-    <div className="row align-items-center">
-
-      <div className="col-lg-7">
-        <div className="hero-content" data-aos="fade-right">
-
-          <span className="hero-subtitle">
-            <FaLeaf />
-            LUXURY SKINCARE & SELF-CARE
-          </span>
-
-          <h1>
-            Reveal Your
-            <span> Natural Radiance.</span>
-          </h1>
-
-          <p>
-            Give your skin the love it deserves with PURELUXE.
-            Explore our luxurious skincare essentials designed
-            to nourish, hydrate and bring out your natural glow.
-          </p>
-
-          <div className="hero-buttons">
-
-            <a href="#products" className="primary-btn">
-              Shop Now <FaArrowRight />
-            </a>
-
-            <a href="#about" className="secondary-btn">
-              Discover PURELUXE
-            </a>
-
-          </div>
-
-          <div className="hero-trust">
-
-            <div>
-              <strong>10K+</strong>
-              <span>Happy Customers</span>
-            </div>
-
-            <div>
-              <strong>4.9/5</strong>
-              <span>Customer Rating</span>
-            </div>
-
-          </div>
-
-        </div>
+        <div className="floating-orb orb-one"></div>
+        <div className="floating-orb orb-two"></div>
+        <div className="floating-orb orb-three"></div>
+        <div className="floating-orb orb-four"></div>
+        <div className="floating-orb orb-five"></div>
       </div>
 
-    </div>
-  </div>
+      <div className="light-beam beam-one"></div>
+      <div className="light-beam beam-two"></div>
+      <div className="light-beam beam-three"></div>
 
-</section>
-      {/* CATEGORIES */}
-<section className="categories-section section-padding" id="categories">
-  <div className="container">
+      <div className="energy-circle energy-one"></div>
+      <div className="energy-circle energy-two"></div>
 
-    <div className="section-heading" data-aos="fade-up">
+      <div className="particle-field">
+        {Array.from({ length: 8 }, (_, index) => (
+          <span
+            key={index}
+            className={`particle particle-${index}`}
+            style={{
+              left: `${(index * 37) % 100}%`,
+              top: `${(index * 53) % 100}%`,
+              animationDelay: `${index * -1.5}s`,
+            }}
+          />
+        ))}
+      </div>
 
-      <span className="section-subtitle">
-        DISCOVER YOUR SKINCARE ESSENTIALS
-      </span>
+      {/* HERO SECTION */}
+      <section className="hero-section" id="home">
 
-      <h2>Explore Our Collections</h2>
+        <img
+          src={hero}
+          alt="PURELUXE Premium Skincare"
+          className="hero-bg-image"
+        />
 
-      <p>
-        From gentle cleansing to deep hydration, discover
-        skincare essentials made to complement your daily
-        beauty and self-care routine.
-      </p>
+        <div className="container">
+          <div className="row align-items-center">
 
-    </div>
+            <div className="col-lg-7">
+              <div className="hero-content" data-aos="fade-right">
 
-    <div className="row g-4">
-      {categories.map((category, index) => (
-        <div
-          className="col-6 col-lg-3"
-          key={category.name}
-          data-aos="fade-up"
-          data-aos-delay={index * 100}
-        >
-          <a href="#products" className="category-card">
+                <span className="hero-subtitle">
+                  <FaLeaf /> LUXURY SKINCARE & SELF-CARE
+                </span>
 
-            <div className="category-image">
-              <img src={category.image} alt={category.name} />
+                <h1>
+                  Reveal Your <span>Natural Radiance.</span>
+                </h1>
 
-              <span className="category-arrow">
-                <FaArrowRight />
-              </span>
+                <p>
+                  Give your skin the love it deserves with PURELUXE.
+                  Explore our luxurious skincare essentials designed
+                  to nourish, hydrate and bring out your natural glow.
+                </p>
+
+                <div className="hero-buttons">
+                  <a href="#products" className="primary-btn">
+                    Shop Now <FaArrowRight />
+                  </a>
+
+                  <a href="#about" className="secondary-btn">
+                    Discover PURELUXE
+                  </a>
+                </div>
+
+                <div className="hero-trust">
+                  <div>
+                    <strong>10K+</strong>
+                    <span>Happy Customers</span>
+                  </div>
+
+                  <div>
+                    <strong>4.9/5</strong>
+                    <span>Customer Rating</span>
+                  </div>
+                </div>
+
+              </div>
             </div>
 
-            <h3>{category.name}</h3>
-
-            <p>{category.description}</p>
-
-          </a>
+          </div>
         </div>
-      ))}
-    </div>
+      </section>
 
-  </div>
-</section>
+      {/* CATEGORIES */}
+      <section
+        className="categories-section section-padding"
+        id="categories"
+      >
+        <div className="container">
 
-     {/* BEST SELLERS */}
-<section className="products-section section-padding" id="products">
-  <div className="container">
-
-    <div className="section-heading" data-aos="fade-up">
-
-      <span className="section-subtitle">
-        LOVED BY BEAUTY ENTHUSIASTS
-      </span>
-
-      <h2>Our Most Loved Products</h2>
-
-      <p>
-        Explore our bestselling skincare essentials,
-        chosen by customers to make their daily beauty
-        routines more special.
-      </p>
-
-    </div>
-
-    <div className="row g-4">
-      {products.slice(0, 4).map((product) => (
-        <div className="col-12 col-sm-6 col-lg-3" key={product.id}>
-          <ProductCard product={product} />
-        </div>
-      ))}
-    </div>
-
-    <div className="text-center mt-5">
-      <a href="#new-arrivals" className="outline-btn">
-        Discover More Beauty <FaArrowRight />
-      </a>
-    </div>
-
-  </div>
-</section>
-      {/* NEW ARRIVALS */}
-<section className="new-arrivals-section section-padding" id="new-arrivals">
-  <div className="container">
-
-    <div className="section-heading" data-aos="fade-up">
-      <span className="section-subtitle">
-        FRESH FINDS JUST FOR YOU
-      </span>
-
-      <h2>Discover What's New</h2>
-
-      <p>
-        Explore our latest skincare arrivals and find new
-        favourites to elevate your everyday beauty routine.
-      </p>
-    </div>
-
-    <div className="row g-4">
-      {newArrivals.map((product) => (
-        <div className="col-12 col-sm-6 col-lg-4" key={product.id}>
-          <ProductCard product={product} />
-        </div>
-      ))}
-    </div>
-
-  </div>
-</section>
-
-      {/* FEATURED COLLECTION */}
-<section className="featured-section section-padding">
-  <div className="container">
-    <div className="featured-card" data-aos="zoom-in">
-
-      <div className="row align-items-center">
-
-        <div className="col-lg-6">
-          <div className="featured-content">
-
+          <div className="section-heading" data-aos="fade-up">
             <span className="section-subtitle">
-              DISCOVER YOUR GLOW
+              DISCOVER YOUR SKINCARE ESSENTIALS
             </span>
 
-            <h2>
-              Beautiful Skin.
-              <span> Beautiful You.</span>
-            </h2>
+            <h2>Explore Our Collections</h2>
 
             <p>
-              Discover the perfect skincare essentials to refresh,
-              nourish, and care for your skin. From daily cleansing
-              to lasting hydration, make every skincare moment
-              feel special with PURELUXE.
+              From gentle cleansing to deep hydration, discover
+              skincare essentials made to complement your daily
+              beauty and self-care routine.
+            </p>
+          </div>
+
+          <div className="row g-4">
+
+            {categories.map((category, index) => (
+              <div
+                className="col-6 col-lg-3"
+                key={category.name}
+                data-aos="fade-up"
+                data-aos-delay={index * 100}
+              >
+                <a href="#products" className="category-card">
+
+                  <div className="category-image">
+                    <img
+                      src={category.image}
+                      alt={category.name}
+                    />
+
+                    <span className="category-arrow">
+                      <FaArrowRight />
+                    </span>
+                  </div>
+
+                  <h3>{category.name}</h3>
+                  <p>{category.description}</p>
+
+                </a>
+              </div>
+            ))}
+
+          </div>
+        </div>
+      </section>
+
+      {/* BEST SELLERS */}
+      <section
+        className="products-section section-padding"
+        id="products"
+      >
+        <div className="container">
+
+          <div className="section-heading" data-aos="fade-up">
+            <span className="section-subtitle">
+              LOVED BY BEAUTY ENTHUSIASTS
+            </span>
+
+            <h2>Our Most Loved Products</h2>
+
+            <p>
+              Explore our bestselling skincare essentials,
+              chosen by customers to make their daily beauty
+              routines more special.
+            </p>
+          </div>
+
+          <div className="row g-4">
+
+            {products.slice(0, 4).map((product) => (
+              <div
+                className="col-12 col-sm-6 col-lg-3"
+                key={product.id}
+              >
+                <ProductCard product={product} />
+              </div>
+            ))}
+
+          </div>
+
+          <div className="text-center mt-5">
+            <a href="#new-arrivals" className="outline-btn">
+              Discover More Beauty <FaArrowRight />
+            </a>
+          </div>
+
+        </div>
+      </section>
+
+      {/* NEW ARRIVALS */}
+      <section
+        className="new-arrivals-section section-padding"
+        id="new-arrivals"
+      >
+        <div className="container">
+
+          <div className="section-heading" data-aos="fade-up">
+            <span className="section-subtitle">
+              FRESH FINDS JUST FOR YOU
+            </span>
+
+            <h2>Discover What's New</h2>
+
+            <p>
+              Explore our latest skincare arrivals and find
+              new favourites to elevate your everyday beauty routine.
+            </p>
+          </div>
+
+          <div className="row g-4">
+
+            {newArrivals.map((product) => (
+              <div
+                className="col-12 col-sm-6 col-lg-4"
+                key={product.id}
+              >
+                <ProductCard product={product} />
+              </div>
+            ))}
+
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURED COLLECTION */}
+      <section className="featured-section section-padding">
+        <div className="container">
+
+          <div className="featured-card" data-aos="zoom-in">
+
+            <div className="row align-items-center">
+
+              <div className="col-lg-6">
+                <div className="featured-content">
+
+                  <span className="section-subtitle">
+                    DISCOVER YOUR GLOW
+                  </span>
+
+                  <h2>
+                    Beautiful Skin. <span>Beautiful You.</span>
+                  </h2>
+
+                  <p>
+                    Discover the perfect skincare essentials to refresh,
+                    nourish, and care for your skin. From daily cleansing
+                    to lasting hydration, make every skincare moment
+                    feel special with PURELUXE.
+                  </p>
+
+                  <a href="#products" className="primary-btn">
+                    Shop Our Collection <FaArrowRight />
+                  </a>
+
+                </div>
+              </div>
+
+              <div className="col-lg-6">
+                <div className="featured-image">
+                  <img
+                    src={collection}
+                    alt="PURELUXE skincare collection"
+                  />
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PROMOTIONAL BANNER */}
+      <section className="promo-banner">
+        <div className="container">
+
+          <div className="promo-content" data-aos="fade-up">
+
+            <span>DISCOVER THE BEAUTY OF SELF-CARE</span>
+
+            <h2>Because Your Skin Deserves the Best.</h2>
+
+            <p>
+              Give your skin the care it deserves with PURELUXE.
+              Explore our premium skincare collection and make
+              every day a beautiful glow day.
             </p>
 
-            <a href="#products" className="primary-btn">
-              Shop Our Collection <FaArrowRight />
+            <a href="#products" className="light-btn">
+              Pureluxe Collection <FaArrowRight />
             </a>
 
           </div>
         </div>
+      </section>
 
-        <div className="col-lg-6">
-          <div className="featured-image">
-            <img
-              src={collection}
-              alt="PURELUXE premium skincare collection"
-            />
-          </div>
-        </div>
+      {/* ABOUT BRAND */}
+      <section
+        className="about-section section-padding"
+        id="about"
+      >
+        <div className="container">
 
-      </div>
-    </div>
-  </div>
-</section>
-     {/* PROMOTIONAL BANNER */}
-<section className="promo-banner">
-  <div className="container">
-    <div className="promo-content" data-aos="fade-up">
+          <div className="row align-items-center g-5">
 
-      <span>
-        DISCOVER THE BEAUTY OF SELF-CARE
-      </span>
+            <div className="col-lg-6">
+              <div className="about-image" data-aos="fade-right">
 
-      <h2>
-        Because Your Skin Deserves the Best.
-      </h2>
+                <img
+                  src={about}
+                  alt="About PURELUXE skincare"
+                />
 
-      <p>
-        Give your skin the care it deserves with PURELUXE.
-        Explore our premium skincare collection and make
-        every day a beautiful glow day.
-      </p>
+                <div className="about-image-label">
+                  <FaLeaf />
+                  <span>Beauty Begins With Care</span>
+                </div>
 
-      <a href="#products" className="light-btn">
-        Pureluxe Collection <FaArrowRight />
-      </a>
-
-    </div>
-  </div>
-</section>
-
-    {/* ABOUT BRAND */}
-<section className="about-section section-padding" id="about">
-  <div className="container">
-    <div className="row align-items-center g-5">
-
-      <div className="col-lg-6">
-        <div className="about-image" data-aos="fade-right">
-          <img src={about} alt="About PURELUXE premium skincare" />
-
-          <div className="about-image-label">
-            <FaLeaf />
-            <span>Beauty Begins With Care</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="col-lg-6">
-        <div className="about-content" data-aos="fade-left">
-          <h2>
-            Your Skin Deserves
-            <span> Something Special.</span>
-          </h2>
-
-          <p>
-            At PURELUXE, we believe beautiful skin begins with
-            consistent care and the right skincare essentials.
-            Our goal is to make your skincare journey simple,
-            enjoyable, and full of confidence.
-          </p>
-
-          <p>
-            From refreshing cleansers to nourishing moisturizers
-            and everyday sun protection, discover products that
-            make caring for your skin a beautiful daily ritual.
-          </p>
-
-          <div className="about-points">
-
-            <div>
-              <FaCheckCircle />
-              <span>Essentials for everyday skincare</span>
+              </div>
             </div>
 
-            <div>
-              <FaCheckCircle />
-              <span>Quality-focused product selection</span>
-            </div>
+            <div className="col-lg-6">
+              <div className="about-content" data-aos="fade-left">
 
-            <div>
-              <FaCheckCircle />
-              <span>Beauty, comfort and confidence</span>
-            </div>
-            <div>
-              <FaCheckCircle />
-              <span>Carefully selected skincare essentials</span>
-            </div>
+                <h2>
+                  Your Skin Deserves <span>Something Special.</span>
+                </h2>
 
-          </div>
-
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-     {/* WHY CHOOSE US */}
-<section className="why-section section-padding">
-  <div className="container">
-
-    <div className="section-heading" data-aos="fade-up">
-      
-      <h2>Beauty Begins With Better Care</h2>
-      <p>
-        Discover a skincare experience that brings quality,
-        comfort, and confidence into your everyday routine.
-      </p>
-    </div>
-
-    <div className="row g-4">
-
-      {/* CARD 1 */}
-      <div className="col-12 col-sm-6 col-lg-3">
-        <div className="why-card" data-aos="fade-up">
-          <div className="why-icon">
-            <FaLeaf />
-          </div>
-          <h3>Skin-Loving Care</h3>
-          <p>
-            Explore thoughtfully selected skincare essentials
-            for your everyday beauty routine.
-          </p>
-        </div>
-      </div>
-
-      {/* CARD 2 */}
-      <div className="col-12 col-sm-6 col-lg-3">
-        <div className="why-card" data-aos="fade-up" data-aos-delay="100">
-          <div className="why-icon">
-            <FaShieldAlt />
-          </div>
-          <h3>Quality You Trust</h3>
-          <p>
-            Discover quality-focused products with clear
-            information to make confident choices.
-          </p>
-        </div>
-      </div>
-
-      {/* CARD 3 */}
-      <div className="col-12 col-sm-6 col-lg-3">
-        <div className="why-card" data-aos="fade-up" data-aos-delay="200">
-          <div className="why-icon">
-            <FaShippingFast />
-          </div>
-          <h3>Fast & Easy Delivery</h3>
-          <p>
-            Enjoy a smooth shopping experience with convenient
-            ordering and reliable delivery.
-          </p>
-        </div>
-      </div>
-
-      {/* CARD 4 */}
-      <div className="col-12 col-sm-6 col-lg-3">
-        <div className="why-card" data-aos="fade-up" data-aos-delay="300">
-          <div className="why-icon">
-            <FaHeadset />
-          </div>
-          <h3>Here For You</h3>
-          <p>
-            Our friendly support team is ready to help
-            make your shopping experience easier.
-          </p>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-     {/* PRODUCT HIGHLIGHTS */}
-<section className="highlight-section section-padding">
-  <div className="container">
-    <div className="row align-items-center g-5">
-
-      <div className="col-lg-6">
-        <div className="highlight-image" data-aos="fade-right">
-          <img src={highlight} alt="PURELUXE premium skincare collection" />
-        </div>
-      </div>
-
-      <div className="col-lg-6">
-        <div className="highlight-content" data-aos="fade-left">
-
-          
-
-          <h2>
-            Simple Care.
-            <span> Beautiful Glow.</span>
-          </h2>
-
-          <p>
-            Give your skin the love it deserves with PURELUXE.
-            Discover carefully selected skincare essentials designed
-            to make your daily beauty routine simple, refreshing,
-            and enjoyable.
-          </p>
-
-          <div className="highlight-list">
-
-            <div>
-              <span className="highlight-icon">
-                <FaTint />
-              </span>
-              <div>
-                <h3>Gentle Cleansing</h3>
                 <p>
-                  Refresh your skin and remove everyday impurities
-                  with a gentle cleansing routine.
+                  At PURELUXE, we believe beautiful skin begins
+                  with consistent care and the right skincare essentials.
+                  Our goal is to make your skincare journey simple,
+                  enjoyable, and full of confidence.
+                </p>
+
+                <p>
+                  From refreshing cleansers to nourishing moisturizers
+                  and everyday sun protection, discover products that
+                  make caring for your skin a beautiful daily ritual.
+                </p>
+
+                <div className="about-points">
+
+                  <div>
+                    <FaCheckCircle />
+                    <span>Essentials for everyday skincare</span>
+                  </div>
+
+                  <div>
+                    <FaCheckCircle />
+                    <span>Quality-focused product selection</span>
+                  </div>
+
+                  <div>
+                    <FaCheckCircle />
+                    <span>Beauty, comfort and confidence</span>
+                  </div>
+
+                  <div>
+                    <FaCheckCircle />
+                    <span>Carefully selected skincare essentials</span>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* WHY CHOOSE US */}
+      <section className="why-section section-padding">
+        <div className="container">
+
+          <div className="section-heading" data-aos="fade-up">
+            <h2>Beauty Begins With Better Care</h2>
+
+            <p>
+              Discover a skincare experience that brings quality,
+              comfort, and confidence into your everyday routine.
+            </p>
+          </div>
+
+          <div className="row g-4">
+
+            <div className="col-12 col-sm-6 col-lg-3">
+              <div className="why-card" data-aos="fade-up">
+                <div className="why-icon"><FaLeaf /></div>
+                <h3>Skin-Loving Care</h3>
+                <p>
+                  Explore thoughtfully selected skincare essentials
+                  for your everyday beauty routine.
                 </p>
               </div>
             </div>
 
-            <div>
-              <span className="highlight-icon">
-                <FaRegSmile />
-              </span>
-              <div>
-                <h3>Deep Hydration</h3>
+            <div className="col-12 col-sm-6 col-lg-3">
+              <div
+                className="why-card"
+                data-aos="fade-up"
+                data-aos-delay="100"
+              >
+                <div className="why-icon"><FaShieldAlt /></div>
+                <h3>Quality You Trust</h3>
                 <p>
-                  Keep your skin feeling soft, smooth, and hydrated
-                  with nourishing moisturizers.
+                  Discover quality-focused products with clear
+                  information to make confident choices.
                 </p>
               </div>
             </div>
 
-            <div>
-              <span className="highlight-icon">
-                <FaSun />
-              </span>
-              <div>
-                <h3>Daily Sun Protection</h3>
+            <div className="col-12 col-sm-6 col-lg-3">
+              <div
+                className="why-card"
+                data-aos="fade-up"
+                data-aos-delay="200"
+              >
+                <div className="why-icon"><FaShippingFast /></div>
+                <h3>Fast & Easy Delivery</h3>
                 <p>
-                  Protect your skin from harmful UV rays with
-                  everyday broad-spectrum sunscreen.
+                  Enjoy a smooth shopping experience with convenient
+                  ordering and reliable delivery.
+                </p>
+              </div>
+            </div>
+
+            <div className="col-12 col-sm-6 col-lg-3">
+              <div
+                className="why-card"
+                data-aos="fade-up"
+                data-aos-delay="300"
+              >
+                <div className="why-icon"><FaHeadset /></div>
+                <h3>Here For You</h3>
+                <p>
+                  Our friendly support team is ready to help make
+                  your shopping experience easier.
                 </p>
               </div>
             </div>
 
           </div>
-
         </div>
-      </div>
+      </section>
 
-    </div>
-  </div>
-</section>
+      {/* PRODUCT HIGHLIGHTS */}
+      <section className="highlight-section section-padding">
+        <div className="container">
 
-{/* CUSTOMER REVIEWS */}
-<section className="reviews-section section-padding" id="reviews">
-  <div className="container">
+          <div className="row align-items-center g-5">
 
-    <div className="section-heading" data-aos="fade-up">
-      
-      <h2>Loved by Our Customers</h2>
-      <p>
-        Discover why our customers trust PURELUXE for their everyday
-        skincare and glowing skin journey.
-      </p>
-    </div>
-
-    <div className="row g-4">
-
-      {/* REVIEW 1 */}
-      <div className="col-12 col-md-6 col-lg-4">
-        <div className="review-card" data-aos="fade-up">
-
-          <div className="review-stars">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <FaStar key={star} />
-            ))}
-          </div>
-
-          <p>
-            "PURELUXE has become my favourite skincare destination!
-            The products feel amazing on my skin and are perfect
-            for my everyday skincare routine."
-          </p>
-
-          <div className="review-user">
-            <div className="review-avatar">A</div>
-            <div>
-              <h4>Ananya R.</h4>
-              <span>Verified Customer</span>
+            <div className="col-lg-6">
+              <div className="highlight-image" data-aos="fade-right">
+                <img
+                  src={highlight}
+                  alt="PURELUXE skincare highlights"
+                />
+              </div>
             </div>
-          </div>
 
-        </div>
-      </div>
+            <div className="col-lg-6">
+              <div className="highlight-content" data-aos="fade-left">
 
-      {/* REVIEW 2 */}
-      <div className="col-12 col-md-6 col-lg-4">
-        <div className="review-card" data-aos="fade-up" data-aos-delay="100">
+                <h2>
+                  Simple Care. <span>Beautiful Glow.</span>
+                </h2>
 
-          <div className="review-stars">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <FaStar key={star} />
-            ))}
-          </div>
+                <p>
+                  Give your skin the love it deserves with PURELUXE.
+                  Discover carefully selected skincare essentials
+                  designed to make your daily beauty routine simple,
+                  refreshing, and enjoyable.
+                </p>
 
-          <p>
-            "I absolutely love the quality and presentation of
-            PURELUXE products. Shopping is so easy, and I love
-            exploring their beautiful skincare collection."
-          </p>
+                <div className="highlight-list">
 
-          <div className="review-user">
-            <div className="review-avatar">M</div>
-            <div>
-              <h4>Meera S.</h4>
-              <span>Verified Customer</span>
+                  <div>
+                    <span className="highlight-icon"><FaTint /></span>
+                    <div>
+                      <h3>Gentle Cleansing</h3>
+                      <p>
+                        Refresh your skin and remove everyday
+                        impurities with a gentle cleansing routine.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="highlight-icon"><FaRegSmile /></span>
+                    <div>
+                      <h3>Deep Hydration</h3>
+                      <p>
+                        Keep your skin feeling soft, smooth,
+                        and hydrated with nourishing moisturizers.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="highlight-icon"><FaSun /></span>
+                    <div>
+                      <h3>Daily Sun Protection</h3>
+                      <p>
+                        Protect your skin from harmful UV rays
+                        with everyday broad-spectrum sunscreen.
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* CUSTOMER REVIEWS */}
+      <section
+        className="reviews-section section-padding"
+        id="reviews"
+      >
+        <div className="container">
+
+          <div className="section-heading" data-aos="fade-up">
+            <h2>Loved by Our Customers</h2>
+
+            <p>
+              Discover why our customers trust PURELUXE for their
+              everyday skincare and glowing skin journey.
+            </p>
           </div>
 
-        </div>
-      </div>
+          <div className="row g-4">
 
-      {/* REVIEW 3 */}
-      <div className="col-12 col-md-6 col-lg-4">
-        <div className="review-card" data-aos="fade-up" data-aos-delay="200">
+            {[
+              {
+                initial: "Y",
+                name: "Yoga S.",
+                review:
+                  "PURELUXE has become my favourite skincare destination! The products feel amazing on my skin and are perfect for my everyday skincare routine.",
+              },
+              {
+                initial: "G",
+                name: "Gopi K.",
+                review:
+                  "I absolutely love the quality and presentation of PURELUXE products. Shopping is so easy, and I love exploring their beautiful skincare collection.",
+              },
+              {
+                initial: "N",
+                name: "Nikitha U.",
+                review:
+                  "My skincare shopping experience has been wonderful. I love the elegant collection, simple product details and the overall premium feel of PURELUXE.",
+              },
+            ].map((review, index) => (
+              <div
+                className="col-12 col-md-6 col-lg-4"
+                key={review.name}
+              >
+                <div
+                  className="review-card"
+                  data-aos="fade-up"
+                  data-aos-delay={index * 100}
+                >
 
-          <div className="review-stars">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <FaStar key={star} />
+                  <div className="review-stars">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <FaStar key={star} />
+                    ))}
+                  </div>
+
+                  <p>"{review.review}"</p>
+
+                  <div className="review-user">
+                    <div className="review-avatar">
+                      {review.initial}
+                    </div>
+
+                    <div>
+                      <h4>{review.name}</h4>
+                      <span>Verified Customer</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             ))}
+
           </div>
-
-          <p>
-            "My skincare shopping experience has been wonderful.
-            I love the elegant collection, simple product details
-            and the overall premium feel of PURELUXE."
-          </p>
-
-          <div className="review-user">
-            <div className="review-avatar">K</div>
-            <div>
-              <h4>Kavya P.</h4>
-              <span>Verified Customer</span>
-            </div>
-          </div>
-
         </div>
-      </div>
-
-    </div>
-  </div>
-</section>
+      </section>
 
       {/* SPECIAL OFFERS */}
       <section className="offers-section section-padding">
         <div className="container">
+
           <div className="offer-card" data-aos="zoom-in">
+
             <div className="row align-items-center g-4">
+
               <div className="col-lg-6">
                 <div className="offer-content">
-                  <span className="section-subtitle"> EXCLUSIVE BEAUTY DEALS</span>
+
+                  <span className="section-subtitle">
+                    EXCLUSIVE BEAUTY DEALS
+                  </span>
+
                   <h2>
-                    Glow More,
-                    <span> Spend Less.</span>
+                    Glow More, <span>Spend Less.</span>
                   </h2>
+
                   <p>
-                    Treat your skin to something special! Discover your
-                    favourite skincare essentials and enjoy up to 40% OFF
-                    on selected products. Your journey to healthy,
-                    radiant skin starts here.
+                    Treat your skin to something special!
+                    Discover your favourite skincare essentials
+                    and enjoy up to 40% OFF on selected products.
+                    Your journey to healthy, radiant skin starts here.
                   </p>
+
                   <a href="#products" className="primary-btn">
                     Shop the Collection <FaArrowRight />
                   </a>
+
                 </div>
               </div>
 
               <div className="col-lg-6">
                 <div className="offer-image">
-                  <img src={offer} alt="LUMORA skincare special collection" />
+                  <img
+                    src={offer}
+                    alt="PURELUXE skincare special collection"
+                  />
                 </div>
               </div>
+
             </div>
           </div>
         </div>
       </section>
 
       {/* NEWSLETTER */}
-<section className="newsletter-section section-padding">
-  <div className="container">
-    <div className="newsletter-content" data-aos="fade-up">
+      <section className="newsletter-section section-padding">
+        <div className="container">
 
-      <span className="section-subtitle">
-        STAY BEAUTIFUL WITH PURELUXE
-      </span>
+          <div className="newsletter-content" data-aos="fade-up">
 
-      <h2>A Daily Dose of Beauty in Your Inbox.</h2>
+            <span className="section-subtitle">
+              STAY BEAUTIFUL WITH PURELUXE
+            </span>
 
-      <p>
-        Subscribe to PURELUXE and be the first to discover
-        new skincare arrivals, exclusive beauty offers,
-        skincare tips and special surprises.
-      </p>
+            <h2>A Daily Dose of Beauty in Your Inbox.</h2>
 
-      <form className="newsletter-form" onSubmit={handleNewsletter}>
+            <p>
+              Subscribe to PURELUXE and be the first to discover
+              new skincare arrivals, exclusive beauty offers,
+              skincare tips and special surprises.
+            </p>
 
-        <div className="newsletter-input">
-          <FaEnvelope />
-
-          <input
-            type="email"
-            placeholder="Enter your email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-
-        <button type="submit" className="primary-btn">
-          Join the Glow Club <FaArrowRight />
-        </button>
-
-      </form>
-
-      {newsletterMessage && (
-        <p className="form-message">{newsletterMessage}</p>
-      )}
-
-    </div>
-  </div>
-</section>
-      {/* FAQ */}
-<section className="faq-section section-padding">
-  <div className="container">
-    <div className="row g-5">
-
-      <div className="col-lg-5">
-        <div className="faq-heading" data-aos="fade-right">
-
-          <span className="section-subtitle">
-            WE'RE HERE TO HELP
-          </span>
-
-          <h2>
-            Everything You Need to Know
-          </h2>
-
-          <p>
-            Have questions about skincare, product selection,
-            orders or delivery? Find helpful answers to make
-            your PURELUXE shopping experience easier.
-          </p>
-
-          <a href="#contact" className="secondary-btn">
-            Need More Help? <FaArrowRight />
-          </a>
-
-        </div>
-      </div>
-
-      <div className="col-lg-7">
-        <div className="faq-list" data-aos="fade-left">
-
-          {faqs.map((faq, index) => (
-            <div
-              className={`faq-item ${
-                activeFaq === index ? "active" : ""
-              }`}
-              key={index}
+            <form
+              className="newsletter-form"
+              onSubmit={handleNewsletter}
             >
+              <div className="newsletter-input">
+                <FaEnvelope />
+
+                <input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <button type="submit" className="primary-btn">
+                Join the Glow Club <FaArrowRight />
+              </button>
+            </form>
+
+            {newsletterMessage && (
+              <p className="form-message">{newsletterMessage}</p>
+            )}
+
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="faq-section section-padding" id="faq">
+        <div className="container">
+
+          <div className="row g-5">
+
+            <div className="col-lg-5">
+              <div className="faq-heading" data-aos="fade-right">
+
+                <span className="section-subtitle">
+                  WE'RE HERE TO HELP
+                </span>
+
+                <h2>Everything You Need to Know</h2>
+
+                <p>
+                  Have questions about skincare, product selection,
+                  orders or delivery? Find helpful answers to make
+                  your PURELUXE shopping experience easier.
+                </p>
+
+                <a href="#contact" className="secondary-btn">
+                  Need More Help? <FaArrowRight />
+                </a>
+
+              </div>
+            </div>
+
+            <div className="col-lg-7">
+              <div className="faq-list" data-aos="fade-left">
+
+                {faqs.map((faq, index) => (
+                  <div
+                    className={`faq-item ${
+                      activeFaq === index ? "active" : ""
+                    }`}
+                    key={index}
+                  >
+
+                    <button
+                      className="faq-question"
+                      onClick={() =>
+                        setActiveFaq(
+                          activeFaq === index ? -1 : index
+                        )
+                      }
+                    >
+                      <span>{faq.question}</span>
+
+                      {activeFaq === index
+                        ? <FaMinus />
+                        : <FaPlus />
+                      }
+                    </button>
+
+                    {activeFaq === index && (
+                      <div className="faq-answer">
+                        <p>{faq.answer}</p>
+                      </div>
+                    )}
+
+                  </div>
+                ))}
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* CONTACT */}
+      <section
+        className="contact-section section-padding"
+        id="contact"
+      >
+        <div className="container">
+
+          <div className="section-heading" data-aos="fade-up">
+
+            <span className="section-subtitle">
+              WE'D LOVE TO HEAR FROM YOU
+            </span>
+
+            <h2>Let's Talk Skincare</h2>
+
+            <p>
+              Have questions about your skincare routine or our products?
+              Send us a message and the PURELUXE team will be happy to help.
+            </p>
+
+          </div>
+
+          <div className="row g-5">
+
+            <div className="col-lg-5">
+              <div className="contact-info" data-aos="fade-right">
+
+                <h3>Get in Touch</h3>
+
+                <p>
+                  We're here to make your skincare journey simple
+                  and enjoyable. Contact us for product details,
+                  order support or beauty enquiries.
+                </p>
+
+                <div className="contact-info-item">
+                  <span><FaEnvelope /></span>
+                  <div>
+                    <h4>Email Us</h4>
+                    <p>uk556513@gmail.com</p>
+                  </div>
+                </div>
+
+                <div className="contact-info-item">
+                  <span><FaPhone /></span>
+                  <div>
+                    <h4>Call Us</h4>
+                    <p>+91 93425 68375</p>
+                  </div>
+                </div>
+
+                <div className="contact-info-item">
+                  <span><FaMapMarkerAlt /></span>
+                  <div>
+                    <h4>Our Location</h4>
+                    <p>Puliyampatti, Krishnagiri, Tamil Nadu</p>
+                  </div>
+                </div>
+
+                <div className="contact-socials">
+                  <a href="#contact" aria-label="Facebook">
+                    <FaFacebookF />
+                  </a>
+
+                  <a href="#contact" aria-label="Instagram">
+                    <FaInstagram />
+                  </a>
+
+                  <a href="#contact" aria-label="Pinterest">
+                    <FaPinterestP />
+                  </a>
+                </div>
+
+              </div>
+            </div>
+
+            <div className="col-lg-7">
+
+              <form
+                className="contact-form"
+                onSubmit={handleContact}
+                data-aos="fade-left"
+              >
+
+                <div className="row g-3">
+
+                  <div className="col-md-6">
+                    <label htmlFor="contactName">Your Name</label>
+                    <input
+                      type="text"
+                      id="contactName"
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+
+                  <div className="col-md-6">
+                    <label htmlFor="contactEmail">Email Address</label>
+                    <input
+                      type="email"
+                      id="contactEmail"
+                      placeholder="Enter your email address"
+                      required
+                    />
+                  </div>
+
+                  <div className="col-12">
+                    <label htmlFor="contactSubject">Subject</label>
+                    <input
+                      type="text"
+                      id="contactSubject"
+                      placeholder="Product enquiry, order support, etc."
+                      required
+                    />
+                  </div>
+
+                  <div className="col-12">
+                    <label htmlFor="contactText">Your Message</label>
+                    <textarea
+                      id="contactText"
+                      rows="5"
+                      placeholder="Tell us how we can help you..."
+                      required
+                    ></textarea>
+                  </div>
+
+                  <div className="col-12">
+                    <button type="submit" className="primary-btn">
+                      Send Message <FaArrowRight />
+                    </button>
+                  </div>
+
+                </div>
+
+                {contactMessage && (
+                  <p className="form-message">{contactMessage}</p>
+                )}
+
+              </form>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="footer-section">
+        <div className="container">
+
+          <div className="row g-4 footer-top">
+
+            <div className="col-lg-4 col-md-6">
+
+              <a href="#home" className="footer-logo">
+                PURELUXE
+              </a>
+
+              <p className="footer-about">
+                Discover the beauty of healthy, glowing skin
+                with PURELUXE. Thoughtfully selected skincare
+                essentials to make every day feel special.
+              </p>
+
+              <div className="footer-socials">
+                <a href="#contact" aria-label="Facebook">
+                  <FaFacebookF />
+                </a>
+
+                <a href="#contact" aria-label="Instagram">
+                  <FaInstagram />
+                </a>
+
+                <a href="#contact" aria-label="Pinterest">
+                  <FaPinterestP />
+                </a>
+              </div>
+
+            </div>
+
+            <div className="col-lg-2 col-md-6">
+              <h3>Explore</h3>
+
+              <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About PURELUXE</a></li>
+                <li><a href="#categories">Categories</a></li>
+                <li><a href="#products">Shop All</a></li>
+                <li><a href="#reviews">Customer Reviews</a></li>
+              </ul>
+            </div>
+
+            <div className="col-lg-3 col-md-6">
+              <h3>Customer Support</h3>
+
+              <ul>
+                <li><a href="#contact">Contact Us</a></li>
+                <li><a href="#faq">Frequently Asked Questions</a></li>
+                <li><a href="#contact">Shipping Information</a></li>
+                <li><a href="#contact">Returns & Refunds</a></li>
+                <li><a href="#contact">Privacy Policy</a></li>
+              </ul>
+            </div>
+
+            <div className="col-lg-3 col-md-6">
+              <h3>Get in Touch</h3>
+
+              <div className="footer-contact">
+                <p><FaEnvelope /> uk556513@gmail.com</p>
+                <p><FaPhone /> +91 93425 68375</p>
+                <p>
+                  <FaMapMarkerAlt />
+                  Puliyampatti, Krishnagiri, Tamil Nadu
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          <div className="footer-bottom">
+            <p>
+              © {new Date().getFullYear()} PURELUXE SKINCARE.
+              All Rights Reserved.
+            </p>
+
+            <a href="#home">Back to Top ↑</a>
+          </div>
+
+        </div>
+      </footer>
+
+      {/* CART DRAWER */}
+      {cartOpen && (
+        <div
+          className="cart-overlay"
+          onClick={() => setCartOpen(false)}
+        >
+
+          <div
+            className="cart-drawer"
+            onClick={(e) => e.stopPropagation()}
+          >
+
+            <div className="cart-header">
+
+              <div>
+                <h2>Your Shopping Bag</h2>
+                <p>{cartCount} items in your bag</p>
+              </div>
 
               <button
-                className="faq-question"
-                onClick={() =>
-                  setActiveFaq(activeFaq === index ? -1 : index)
-                }
+                onClick={() => setCartOpen(false)}
+                className="cart-close"
+                aria-label="Close cart"
               >
-                <span>{faq.question}</span>
-
-                {activeFaq === index ? <FaMinus /> : <FaPlus />}
+                <FaTimes />
               </button>
 
-              {activeFaq === index && (
-                <div className="faq-answer">
-                  <p>{faq.answer}</p>
+            </div>
+
+            {!checkoutOpen ? (
+              <>
+
+                <div className="cart-products">
+
+                  {cartItems.length === 0 ? (
+
+                    <div className="empty-cart">
+                      <FaShoppingBag />
+
+                      <h3>Your bag is empty</h3>
+
+                      <p>
+                        Discover your favourite skincare essentials.
+                      </p>
+
+                      <button
+                        className="primary-btn"
+                        onClick={() => setCartOpen(false)}
+                      >
+                        Continue Shopping
+                      </button>
+                    </div>
+
+                  ) : (
+
+                    cartItems.map((item) => (
+
+                      <div className="cart-product" key={item.id}>
+
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                        />
+
+                        <div className="cart-product-details">
+
+                          <h3>{item.name}</h3>
+
+                          <strong>
+                            ₹{item.price.toLocaleString("en-IN")}
+                          </strong>
+
+                          <div className="quantity-control">
+
+                            <button
+                              onClick={() => decreaseQuantity(item.id)}
+                              aria-label="Decrease quantity"
+                            >
+                              <FaMinus />
+                            </button>
+
+                            <span>{item.quantity}</span>
+
+                            <button
+                              onClick={() => increaseQuantity(item.id)}
+                              aria-label="Increase quantity"
+                            >
+                              <FaPlus />
+                            </button>
+
+                          </div>
+                        </div>
+
+                        <button
+                          className="remove-cart"
+                          onClick={() => removeFromCart(item.id)}
+                          aria-label="Remove product"
+                        >
+                          <FaTimes />
+                        </button>
+
+                      </div>
+
+                    ))
+
+                  )}
+
                 </div>
-              )}
+
+                {cartItems.length > 0 && (
+
+                  <div className="cart-footer">
+
+                    <div className="cart-total">
+                      <span>Subtotal</span>
+                      <strong>
+                        ₹{cartTotal.toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+
+                    <div className="cart-total">
+                      <span>Delivery</span>
+                      <strong>FREE</strong>
+                    </div>
+
+                    <div className="cart-total grand-total">
+                      <span>Total Amount</span>
+                      <strong>
+                        ₹{cartTotal.toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+
+                    <button
+                      className="checkout-btn"
+                      onClick={() => setCheckoutOpen(true)}
+                    >
+                      Proceed to Checkout <FaArrowRight />
+                    </button>
+
+                  </div>
+
+                )}
+
+              </>
+
+            ) : (
+
+              /* CHECKOUT FORM */
+              <div className="checkout-content">
+
+                <button
+                  className="back-to-cart"
+                  onClick={() => setCheckoutOpen(false)}
+                >
+                  ← Back to Cart
+                </button>
+
+                <h2>Delivery Details</h2>
+
+                <p>
+                  Enter your details to confirm your order.
+                </p>
+
+                <form onSubmit={handlePlaceOrder}>
+
+                  <label htmlFor="checkoutName">
+                    Full Name
+                  </label>
+
+                  <input
+                    id="checkoutName"
+                    type="text"
+                    placeholder="Enter your name"
+                    value={customer.name}
+                    onChange={(e) =>
+                      setCustomer({
+                        ...customer,
+                        name: e.target.value,
+                      })
+                    }
+                    autoComplete="name"
+                    required
+                  />
+
+                  <label htmlFor="checkoutPhone">
+                    Phone Number
+                  </label>
+
+                  <input
+                    id="checkoutPhone"
+                    type="tel"
+                    placeholder="Enter 10 digit phone number"
+                    pattern="[6-9][0-9]{9}"
+                    maxLength="10"
+                    value={customer.phone}
+                    onChange={(e) =>
+                      setCustomer({
+                        ...customer,
+                        phone: e.target.value,
+                      })
+                    }
+                    autoComplete="tel"
+                    required
+                  />
+
+                  <label htmlFor="checkoutAddress">
+                    Delivery Address
+                  </label>
+
+                  <textarea
+                    id="checkoutAddress"
+                    rows="4"
+                    placeholder="Enter your complete delivery address"
+                    value={customer.address}
+                    onChange={(e) =>
+                      setCustomer({
+                        ...customer,
+                        address: e.target.value,
+                      })
+                    }
+                    autoComplete="street-address"
+                    required
+                  />
+
+                  <div className="checkout-summary">
+                    <span>Total Payable</span>
+
+                    <strong>
+                      ₹{cartTotal.toLocaleString("en-IN")}
+                    </strong>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="checkout-btn"
+                  >
+                    Confirm Order <FaArrowRight />
+                  </button>
+
+                </form>
+
+              </div>
+
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* ORDER SUCCESS SCREEN */}
+      {orderPlaced && (
+
+        <div className="order-success-overlay">
+
+          <div className="order-success-card">
+
+            <div className="success-icon">
+              <FaCheckCircle />
+            </div>
+
+            <span className="success-label">
+              ORDER CONFIRMED
+            </span>
+
+            <h2>Thank You!</h2>
+
+            <p className="success-description">
+              Your PURELUXE order has been placed successfully.
+              We're getting your skincare essentials ready.
+            </p>
+
+            <div className="order-id-box">
+              <span>YOUR ORDER ID</span>
+              <strong>{orderId}</strong>
+            </div>
+
+            <div className="success-customer">
+
+              <p>
+                <strong>Name:</strong> {customer.name}
+              </p>
+
+              <p>
+                <strong>Phone:</strong> {customer.phone}
+              </p>
+
+              <p>
+                <strong>Address:</strong> {customer.address}
+              </p>
 
             </div>
-          ))}
+
+            <button
+              className="checkout-btn"
+              onClick={() => {
+                setOrderPlaced(false);
+
+                setCustomer({
+                  name: "",
+                  phone: "",
+                  address: "",
+                });
+              }}
+            >
+              Continue Shopping <FaArrowRight />
+            </button>
+
+          </div>
 
         </div>
-      </div>
 
-    </div>
-  </div>
-</section>
-      {/* CONTACT */}
-<section className="contact-section section-padding" id="contact">
-  <div className="container">
-    <div className="section-heading" data-aos="fade-up">
-      <span className="section-subtitle">WE'D LOVE TO HEAR FROM YOU</span>
-      <h2>Let's Talk Skincare</h2>
-      <p>
-        Have questions about your skincare routine or our products?
-        Send us a message and the PURELUXE team will be happy to help.
-      </p>
-    </div>
-
-    <div className="row g-5">
-      <div className="col-lg-5">
-        <div className="contact-info" data-aos="fade-right">
-          <h3>Get in Touch</h3>
-          <p>
-            We're here to make your skincare journey simple and enjoyable.
-            Contact us for product details, order support or beauty enquiries.
-          </p>
-
-          <div className="contact-info-item">
-            <span><FaEnvelope /></span>
-            <div>
-              <h4>Email Us</h4>
-              <p>uk556513@gmail.com</p>
-            </div>
-          </div>
-
-          <div className="contact-info-item">
-            <span><FaPhone /></span>
-            <div>
-              <h4>Call Us</h4>
-              <p>+91 93425 68375</p>
-            </div>
-          </div>
-
-          <div className="contact-info-item">
-            <span><FaMapMarkerAlt /></span>
-            <div>
-              <h4>Our Location</h4>
-              <p>Puliyampatti, Krishnagiri, Tamil Nadu</p>
-            </div>
-          </div>
-
-          <div className="contact-socials">
-            <a href="#contact" aria-label="Facebook"><FaFacebookF /></a>
-            <a href="#contact" aria-label="Instagram"><FaInstagram /></a>
-            <a href="#contact" aria-label="Pinterest"><FaPinterestP /></a>
-          </div>
-        </div>
-      </div>
-
-      <div className="col-lg-7">
-        <form className="contact-form" onSubmit={handleContact} data-aos="fade-left">
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label htmlFor="contactName">Your Name</label>
-              <input
-                type="text"
-                id="contactName"
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
-
-            <div className="col-md-6">
-              <label htmlFor="contactEmail">Email Address</label>
-              <input
-                type="email"
-                id="contactEmail"
-                placeholder="Enter your email address"
-                required
-              />
-            </div>
-
-            <div className="col-12">
-              <label htmlFor="contactSubject">Subject</label>
-              <input
-                type="text"
-                id="contactSubject"
-                placeholder="Product enquiry, order support, etc."
-                required
-              />
-            </div>
-
-            <div className="col-12">
-              <label htmlFor="contactText">Your Message</label>
-              <textarea
-                id="contactText"
-                rows="5"
-                placeholder="Tell us how we can help you..."
-                required
-              ></textarea>
-            </div>
-
-            <div className="col-12">
-              <button type="submit" className="primary-btn">
-                Send Message <FaArrowRight />
-              </button>
-            </div>
-          </div>
-
-          {contactMessage && (
-            <p className="form-message">{contactMessage}</p>
-          )}
-        </form>
-      </div>
-    </div>
-  </div>
-</section>
-      {/* FOOTER */}
-<footer className="footer-section">
-  <div className="container">
-    <div className="row g-4 footer-top">
-      <div className="col-lg-4 col-md-6">
-        <a href="#home" className="footer-logo">
-          PURELUXE
-        </a>
-        <p className="footer-about">
-          Discover the beauty of healthy, glowing skin with PURELUXE.
-          Thoughtfully selected skincare essentials to make every
-          day feel special.
-        </p>
-
-        <div className="footer-socials">
-          <a href="#contact" aria-label="Facebook"><FaFacebookF /></a>
-          <a href="#contact" aria-label="Instagram"><FaInstagram /></a>
-          <a href="#contact" aria-label="Pinterest"><FaPinterestP /></a>
-        </div>
-      </div>
-
-      <div className="col-lg-2 col-md-6">
-        <h3>Explore</h3>
-        <ul>
-          <li><a href="#home">Home</a></li>
-          <li><a href="#about">About PURELUXE</a></li>
-          <li><a href="#categories">Categories</a></li>
-          <li><a href="#products">Shop All</a></li>
-          <li><a href="#reviews">Customer Reviews</a></li>
-        </ul>
-      </div>
-
-      <div className="col-lg-3 col-md-6">
-        <h3>Customer Support</h3>
-        <ul>
-          <li><a href="#contact">Contact Us</a></li>
-          <li><a href="#faq">Frequently Asked Questions</a></li>
-          <li><a href="#contact">Shipping Information</a></li>
-          <li><a href="#contact">Returns & Refunds</a></li>
-          <li><a href="#contact">Privacy Policy</a></li>
-        </ul>
-      </div>
-
-      <div className="col-lg-3 col-md-6">
-        <h3>Get in Touch</h3>
-        <div className="footer-contact">
-          <p><FaEnvelope /> uk556513@gmail.com</p>
-          <p><FaPhone /> +91 93425 68375</p>
-          <p><FaMapMarkerAlt /> Puliyampatti, Krishnagiri, Tamil Nadu</p>
-        </div>
-      </div>
-    </div>
-
-    <div className="footer-bottom">
-      <p>© {new Date().getFullYear()} PURELUXE SKINCARE. All Rights Reserved.</p>
-      <a href="#home">Back to Top ↑</a>
-    </div>
-  </div>
-</footer>
+      )}
 
     </div>
   );
